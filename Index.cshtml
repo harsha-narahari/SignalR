@@ -1,0 +1,38 @@
+﻿@{
+    ViewBag.Title = "Home Page";
+}
+
+<h1 id="time">
+
+</h1>
+
+<button class="btn btn-default" id="btnRefreshTime">Refresh Time</button>
+
+@section scripts {
+    <script src="~/Scripts/jquery-1.10.2.min.js"></script>
+    <script src="~/Scripts/jquery.signalR-2.2.1.min.js"></script>
+    <script src="~/signalr/hubs"></script>
+    <script>
+        $(document).ready(function () {
+            var setTime = function (currentTime) {
+                document.getElementById("time").innerText = currentTime;
+            };
+
+            var localTimer = $.connection.timeHub;
+            localTimer.client.updateTime = function (currentTime) {
+                setTime(currentTime);
+            };
+
+            var init = function () {
+                localTimer.server.getTime();
+                $("#btnRefreshTime").on("click", function () {
+                    localTimer.server.getTime();
+                });
+            };
+            $.connection.hub.start().done(init);
+
+        });
+
+
+    </script>
+}
