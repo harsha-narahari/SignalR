@@ -1,0 +1,116 @@
+Signal R
+
+
+What is it?
+
+"A library to achieve real time bi directional, real time communication between (.js) client and (.net) server, in a web application." In simple terms, a client can call a server method or server can call a client method. The former can be achieved by AJAX or http server calls, but to accomplish later, it requires a lot of work. Signal R aims to simplify these cumbersome tasks. Internally it uses web socket if the browser supports it. Otherwise, methods like long polling, etc. is used to achieve the same goal.
+
+
+How to do it?
+
+Let use develop a sample to pull current time at interval of 5 seconds or excusively on demand.
+
+Create an ASP.Net MVC project.
+Add "Microsoft.AspNet.SignalR" nuget package to it.
+Add Home controller.
+Define Index action method to this controller.
+Add View to the Index action method.
+Add script tags that refer "jquery-1.10.2.min.js" and "jquery.signalR-2.2.1.min.js" files in the view.
+Define a custom script as described below:
+	$(document).ready(function () {
+            var setTime = function (currentTime) {
+                document.getElementById("time").innerText = currentTime;
+            };
+
+            var localTimer = $.connection.timeHub;
+            localTimer.client.updateTime = function (currentTime) {
+                setTime(currentTime);
+            };
+
+            var init = function () {
+                localTimer.server.getTime();
+                $("#btnRefreshTime").on("click", function () {
+                    localTimer.server.getTime();
+                });
+            };
+            $.connection.hub.start().done(init);
+
+        });
+
+Define a class that implements Hub class.
+Please note the client can access this class name in camel case in javascript. 
+Or a decorator can be used to give a custom name.
+Illustration:
+public class TimeHub : Hub
+    {
+        private readonly TimerHelper _timerHelper;
+
+        public TimeHub() : this(TimerHelper.Instance) { }
+
+        public TimeHub(TimerHelper stockTicker)
+        {
+            _timerHelper = stockTicker;
+        }
+
+        public void GetTime()
+        {
+            Clients.All.updateTime(DateTime.Now.ToLongTimeString());
+        }
+    }   
+
+
+Define a singleton helper class to call client every 5 seconds.
+Please note object of type "IHubConnectionContext<dynamic>" object is passed to the private constructor to initialiaze "Clients" property.
+A Timer is instatiated to using this "Clients" property to call client.
+Illustration:
+public class TimerHelper
+    {
+        private Timer _timeUpdater;
+
+        private readonly static Lazy<TimerHelper> _instance = new Lazy<TimerHelper>(() => new TimerHelper(GlobalHost.ConnectionManager.GetHubContext<TimeHub>().Clients));
+
+        public static TimerHelper Instance
+        {
+            get
+            {
+                return _instance.Value;
+            }
+        }
+
+        private IHubConnectionContext<dynamic> Clients
+        {
+            get;
+            set;
+        }
+
+        private TimerHelper(IHubConnectionContext<dynamic> clients)
+        {
+            Clients = clients;
+            if (_timeUpdater == null)
+            {
+                _timeUpdater = new Timer(UpdateTime, null, 5000, 5000);
+            }
+        }
+
+        public void UpdateTime(object state)
+        {
+            Clients.All.updateTime(DateTime.Now.ToLongTimeString());
+        }
+    }
+
+In Starttup class, call MapSignalR method on IAppBuilder object.
+Illustration:
+public partial class Startup
+    {
+        public void Configuration(IAppBuilder app)
+        {
+            app.MapSignalR();
+
+            //ConfigureAuth(app);
+        }
+    }
+
+Please go through further reading section for more information on this topic.
+
+Further reading:
+https://www.asp.net/signalr
