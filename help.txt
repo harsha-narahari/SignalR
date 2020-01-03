@@ -98,7 +98,7 @@ public class TimerHelper
         }
     }
 
-In Starttup class, call MapSignalR method on IAppBuilder object.
+In Startup class, call MapSignalR method on IAppBuilder object.
 Illustration:
 public partial class Startup
     {
